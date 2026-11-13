@@ -3,85 +3,56 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>3D Component Asset Editor</title>
+  <title>Pixel-to-3D Synthesizer</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { display: flex; height: 100vh; width: 100vw; overflow: hidden; background: #121214; color: #f4f4f5; }
-    
-    /* Viewport Area */
     #viewport { flex: 1; position: relative; height: 100%; touch-action: none; }
     canvas { display: block; width: 100%; height: 100%; }
     
-    /* Top Floating Bar */
     .top-bar {
-      position: absolute; top: 16px; left: 16px; right: 336px;
+      position: absolute; top: 16px; left: 16px; right: 16px;
       display: flex; justify-content: space-between; align-items: center;
-      pointer-events: none; z-index: 10;
+      pointer-events: none; z-index: 10; gap: 8px; flex-wrap: wrap;
     }
-    .badge {
-      background: rgba(24, 24, 27, 0.85); backdrop-filter: blur(8px);
-      border: 1px solid #27272a; padding: 8px 14px; border-radius: 8px;
-      font-size: 13px; font-weight: 600; pointer-events: auto;
-    }
-    .export-btn {
-      background: #2563eb; color: white; border: none; padding: 10px 16px;
-      border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
-      pointer-events: auto; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-    }
-    .export-btn:active { background: #1d4ed8; transform: scale(0.98); }
+    .badge { background: rgba(24, 24, 27, 0.85); backdrop-filter: blur(8px); border: 1px solid #27272a; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; pointer-events: auto; }
+    .action-group { display: flex; gap: 8px; pointer-events: auto; }
+    .upload-btn { background: #2563eb; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+    .upload-btn:active { background: #1d4ed8; }
+    .export-btn { background: #27272a; color: #f4f4f5; border: 1px solid #3f3f46; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 
-    /* Right Sidebar (Canva Layers + Chat Bridge) */
-    #sidebar {
-      width: 320px; height: 100%; background: #18181b; border-left: 1px solid #27272a;
-      display: flex; flex-direction: column; z-index: 20;
-    }
+    #sidebar { width: 320px; height: 100%; background: #18181b; border-left: 1px solid #27272a; display: flex; flex-direction: column; z-index: 20; }
     .panel-section { padding: 16px; border-bottom: 1px solid #27272a; }
-    .panel-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #a1a1aa; margin-bottom: 12px; font-weight: 700; }
+    .panel-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #a1a1aa; margin-bottom: 10px; font-weight: 700; }
+    .control-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #d4d4d8; margin-top: 8px; }
+    .control-row input[type="range"] { width: 140px; accent-color: #2563eb; }
 
-    /* Layer Tree */
-    #layer-list { display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; }
-    .layer-item {
-      display: flex; justify-content: space-between; align-items: center;
-      background: #27272a; padding: 10px 12px; border-radius: 6px; font-size: 13px;
-    }
-    .layer-toggle {
-      background: #3f3f46; color: #f4f4f5; border: none; padding: 4px 8px;
-      border-radius: 4px; font-size: 11px; cursor: pointer;
-    }
+    #layer-list { display: flex; flex-direction: column; gap: 8px; max-height: 190px; overflow-y: auto; }
+    .layer-item { display: flex; justify-content: space-between; align-items: center; background: #27272a; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+    .layer-info { display: flex; align-items: center; gap: 8px; }
+    .color-swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.2); }
+    .layer-toggle { background: #3f3f46; color: #f4f4f5; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
     .layer-toggle.hidden-node { opacity: 0.5; }
 
-    /* Chat Bridge */
     #chat-container { flex: 1; display: flex; flex-direction: column; padding: 16px; overflow: hidden; }
-    #chat-log {
-      flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
-      margin-bottom: 12px; padding-right: 4px;
-    }
+    #chat-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; padding-right: 4px; }
     .msg { padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.4; }
     .msg.user { background: #2563eb; align-self: flex-end; max-width: 85%; }
-    .msg.sys { background: #27272a; align-self: flex-start; max-width: 90%; color: #d4d4d8; }
+    .msg.sys { background: #27272a; align-self: flex-start; max-width: 92%; color: #d4d4d8; }
     .msg code { display: block; margin-top: 6px; padding: 6px; background: #121214; border-radius: 4px; font-size: 11px; color: #4ade80; }
 
     .chat-input-box { display: flex; gap: 8px; }
-    #chat-input {
-      flex: 1; background: #27272a; border: 1px solid #3f3f46; color: white;
-      padding: 10px 12px; border-radius: 8px; font-size: 13px; outline: none;
-    }
-    #send-btn {
-      background: #f4f4f5; color: #18181b; border: none; padding: 0 14px;
-      border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer;
-    }
+    #chat-input { flex: 1; background: #27272a; border: 1px solid #3f3f46; color: white; padding: 10px 12px; border-radius: 8px; font-size: 13px; outline: none; }
+    #send-btn { background: #f4f4f5; color: #18181b; border: none; padding: 0 14px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; }
 
-    /* Mobile / iPad Portrait Adjustment */
     @media (max-width: 768px) {
       body { flex-direction: column; }
-      #viewport { height: 55vh; }
-      #sidebar { width: 100%; height: 45vh; border-left: none; border-top: 1px solid #27272a; }
-      .top-bar { right: 16px; }
-      #layer-list { max-height: 100px; }
+      #viewport { height: 52vh; }
+      #sidebar { width: 100%; height: 48vh; border-left: none; border-top: 1px solid #27272a; }
+      #layer-list { max-height: 95px; }
     }
   </style>
 
-  <!-- Import Map for Three.js r149 -->
   <script type="importmap">
     {
       "imports": {
@@ -92,33 +63,44 @@
   </script>
 </head>
 <body>
-
   <div id="viewport">
     <div class="top-bar">
-      <div class="badge">Modular Asset Sandbox</div>
-      <button class="export-btn" id="export-glb">Export .GLB</button>
+      <div class="badge">Pixel-to-3D Synthesizer</div>
+      <div class="action-group">
+        <label class="upload-btn">
+          Upload Image
+          <input type="file" id="image-upload" accept="image/*" style="display: none;" />
+        </label>
+        <button class="export-btn" id="export-glb">Export .GLB</button>
+      </div>
     </div>
   </div>
 
   <div id="sidebar">
     <div class="panel-section">
-      <div class="panel-title">Scene Hierarchy (Nodes)</div>
+      <div class="panel-title">Extrusion Settings</div>
+      <div class="control-row">
+        <span>Grid Resolution</span>
+        <input type="range" id="res-slider" min="16" max="48" step="8" value="32" />
+      </div>
+      <div class="control-row">
+        <span>3D Relief Depth</span>
+        <input type="range" id="depth-slider" min="0.5" max="4" step="0.5" value="1.5" />
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Scene Hierarchy</div>
       <div id="layer-list"></div>
     </div>
 
     <div id="chat-container">
-      <div class="panel-title">Chat-to-JSON Control Bridge</div>
+      <div class="panel-title">Control Bridge</div>
       <div id="chat-log">
-        <div class="msg sys">
-          Try commands like:<br>
-          • <b>"make signage blue"</b><br>
-          • <b>"scale balconies 1.4"</b><br>
-          • <b>"make core red"</b><br>
-          • <b>"hide ac"</b> or <b>"show ac"</b>
-        </div>
+        <div class="msg sys">Tap <b>Upload Image</b> to convert any photo into 3D voxel layers instantly.</div>
       </div>
       <div class="chat-input-box">
-        <input type="text" id="chat-input" placeholder="Edit component property..." />
+        <input type="text" id="chat-input" placeholder="Command (e.g. hide layer_1)..." />
         <button id="send-btn">Run</button>
       </div>
     </div>
@@ -129,82 +111,151 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
-    // 1. Scene, Camera & Renderer Setup
     const container = document.getElementById('viewport');
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x121214);
 
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(10, 9, 14);
+    camera.position.set(0, 5, 14);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.target.set(0, 2.5, 0);
 
-    // 2. Lighting & Grid
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
-    scene.add(ambientLight);
-
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-    dirLight.position.set(8, 15, 10);
-    dirLight.castShadow = true;
+    dirLight.position.set(10, 18, 12);
     scene.add(dirLight);
+    scene.add(new THREE.GridHelper(20, 20, 0x3f3f46, 0x27272a));
 
-    const grid = new THREE.GridHelper(20, 20, 0x3f3f46, 0x27272a);
-    scene.add(grid);
-
-    // 3. Modular Asset Root Group (Canva-style structured hierarchy)
     const assetRoot = new THREE.Group();
-    assetRoot.name = "Modular_Building_Asset";
     scene.add(assetRoot);
 
-    const nodeRegistry = {};
+    let nodeRegistry = {};
+    let lastLoadedImage = null;
 
-    function registerComponent(name, meshOrGroup) {
+    function clearAssetRoot() {
+      while (assetRoot.children.length > 0) {
+        const child = assetRoot.children[0];
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+        assetRoot.remove(child);
+      }
+      nodeRegistry = {};
+    }
+
+    function registerComponent(name, meshOrGroup, hexColor = '#71717a') {
       meshOrGroup.name = name;
+      meshOrGroup.userData.swatch = hexColor;
       assetRoot.add(meshOrGroup);
       nodeRegistry[name] = meshOrGroup;
     }
 
-    // Component A: Structural_Core
-    const coreMat = new THREE.MeshStandardMaterial({ color: 0x52525b, roughness: 0.7 });
-    const coreMesh = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 4), coreMat);
-    coreMesh.position.y = 3;
-    coreMesh.castShadow = true;
-    coreMesh.receiveShadow = true;
-    registerComponent("Structural_Core", coreMesh);
+    function buildDefaultAsset() {
+      clearAssetRoot();
+      const core = new THREE.Mesh(
+        new THREE.BoxGeometry(4, 5, 4),
+        new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.6 })
+      );
+      core.position.y = 2.5;
+      registerComponent("Structural_Core", core, '#3b82f6');
+      renderLayers();
+    }
 
-    // Component B: Balcony_Group
-    const balconyGroup = new THREE.Group();
-    const balconyMat = new THREE.MeshStandardMaterial({ color: 0xa1a1aa, roughness: 0.5 });
-    [1.8, 3.8].forEach(yPos => {
-      const balc = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.3, 1.2), balconyMat);
-      balc.position.set(0, yPos, 2.2);
-      balc.castShadow = true;
-      balconyGroup.add(balc);
+    function synthesize3DFromImage(img) {
+      clearAssetRoot();
+      const res = parseInt(document.getElementById('res-slider').value, 10);
+      const maxDepth = parseFloat(document.getElementById('depth-slider').value);
+
+      const aspect = img.width / img.height;
+      const w = aspect >= 1 ? res : Math.max(8, Math.round(res * aspect));
+      const h = aspect >= 1 ? Math.max(8, Math.round(res / aspect)) : res;
+
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = w;
+      offCanvas.height = h;
+      const ctx = offCanvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const imgData = ctx.getImageData(0, 0, w, h).data;
+      const clusters = {};
+
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const idx = (y * w + x) * 4;
+          const r = imgData[idx], g = imgData[idx + 1], b = imgData[idx + 2], a = imgData[idx + 3];
+
+          if (a < 30) continue; // Skip fully transparent pixels
+
+          // Quantize colors into buckets
+          const qr = Math.round(r / 64) * 64;
+          const qg = Math.round(g / 64) * 64;
+          const qb = Math.round(b / 64) * 64;
+          const key = `${qr}_${qg}_${qb}`;
+
+          if (!clusters[key]) {
+            clusters[key] = {
+              hex: "#" + [qr, qg, qb].map(val => Math.min(255, val).toString(16).padStart(2, '0')).join(''),
+              intColor: (Math.min(255, qr) << 16) | (Math.min(255, qg) << 8) | Math.min(255, qb),
+              voxels: []
+            };
+          }
+          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+          clusters[key].voxels.push({ x, y, luminance });
+        }
+      }
+
+      const sortedKeys = Object.keys(clusters).sort((a, b) => clusters[b].voxels.length - clusters[a].voxels.length);
+      const voxelSize = 8 / Math.max(w, h);
+      const baseGeo = new THREE.BoxGeometry(voxelSize * 0.95, voxelSize * 0.95, 1);
+      const dummy = new THREE.Object3D();
+
+      sortedKeys.slice(0, 10).forEach((key, index) => {
+        const cluster = clusters[key];
+        const mat = new THREE.MeshStandardMaterial({ color: cluster.intColor, roughness: 0.5 });
+        const instMesh = new THREE.InstancedMesh(baseGeo, mat, cluster.voxels.length);
+
+        cluster.voxels.forEach((v, i) => {
+          const depth = Math.max(0.2, v.luminance * maxDepth);
+          dummy.position.set((v.x - w / 2) * voxelSize, (h - v.y) * voxelSize, 0);
+          dummy.scale.set(1, 1, depth);
+          dummy.updateMatrix();
+          instMesh.setMatrixAt(i, dummy.matrix);
+        });
+
+        instMesh.instanceMatrix.needsUpdate = true;
+        registerComponent(`Layer_${index + 1}`, instMesh, cluster.hex);
+      });
+
+      renderLayers();
+      const log = document.getElementById('chat-log');
+      const div = document.createElement('div');
+      div.className = 'msg sys';
+      div.innerHTML = `Converted image into <b>${Object.keys(nodeRegistry).length} 3D layers</b>.`;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    document.getElementById('image-upload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          lastLoadedImage = img;
+          synthesize3DFromImage(img);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
     });
-    registerComponent("Balcony_Group", balconyGroup);
 
-    // Component C: Signage_Block
-    const signMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x330000, roughness: 0.3 });
-    const signMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 2.6, 0.8), signMat);
-    signMesh.position.set(2.2, 3.5, 1.2);
-    registerComponent("Signage_Block", signMesh);
-
-    // Component D: Roof_AC_Unit
-    const acMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, roughness: 0.6 });
-    const acMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 1.4), acMat);
-    acMesh.position.set(-0.8, 6.45, -0.6);
-    acMesh.castShadow = true;
-    registerComponent("Roof_AC_Unit", acMesh);
-
-    // 4. Populate Layer Sidebar
     const layerList = document.getElementById('layer-list');
     function renderLayers() {
       layerList.innerHTML = '';
@@ -213,7 +264,10 @@
         const row = document.createElement('div');
         row.className = 'layer-item';
         row.innerHTML = `
-          <span>${key}</span>
+          <div class="layer-info">
+            <span class="color-swatch" style="background:${node.userData.swatch}"></span>
+            <span>${key}</span>
+          </div>
           <button class="layer-toggle ${node.visible ? '' : 'hidden-node'}">${node.visible ? 'Visible' : 'Hidden'}</button>
         `;
         row.querySelector('button').addEventListener('click', () => {
@@ -223,130 +277,22 @@
         layerList.appendChild(row);
       });
     }
-    renderLayers();
 
-    // 5. Chat-to-JSON Property Bridge
-    const chatLog = document.getElementById('chat-log');
-    const chatInput = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('send-btn');
-
-    const colorMap = {
-      red: 0xef4444, blue: 0x3b82f6, green: 0x22c55e,
-      yellow: 0xeab308, purple: 0xa855f7, white: 0xf4f4f5,
-      black: 0x18181b, gray: 0x71717a, orange: 0xf97316
-    };
-
-    function appendMessage(text, sender, jsonPayload = null) {
-      const div = document.createElement('div');
-      div.className = `msg ${sender}`;
-      div.innerHTML = text + (jsonPayload ? `<code>${JSON.stringify(jsonPayload)}</code>` : '');
-      chatLog.appendChild(div);
-      chatLog.scrollTop = chatLog.scrollHeight;
-    }
-
-    function applyColorToNode(node, hex) {
-      node.traverse(child => {
-        if (child.isMesh && child.material) {
-          child.material.color.setHex(hex);
-        }
-      });
-    }
-
-    function processCommand(raw) {
-      const cmd = raw.toLowerCase().trim();
-      if (!cmd) return;
-
-      appendMessage(raw, 'user');
-
-      // Identify target node
-      let targetKey = null;
-      if (cmd.includes('core') || cmd.includes('building')) targetKey = 'Structural_Core';
-      else if (cmd.includes('balcon')) targetKey = 'Balcony_Group';
-      else if (cmd.includes('sign')) targetKey = 'Signage_Block';
-      else if (cmd.includes('ac') || cmd.includes('roof')) targetKey = 'Roof_AC_Unit';
-
-      if (!targetKey) {
-        appendMessage('Specify a component: <b>core</b>, <b>balconies</b>, <b>signage</b>, or <b>ac</b>.', 'sys');
-        return;
-      }
-
-      const targetNode = nodeRegistry[targetKey];
-      const payload = { target: targetKey };
-
-      // Visibility mutation
-      if (cmd.includes('hide')) {
-        targetNode.visible = false;
-        payload.visible = false;
-        renderLayers();
-        appendMessage(`Updated ${targetKey}`, 'sys', payload);
-        return;
-      }
-      if (cmd.includes('show')) {
-        targetNode.visible = true;
-        payload.visible = true;
-        renderLayers();
-        appendMessage(`Updated ${targetKey}`, 'sys', payload);
-        return;
-      }
-
-      // Scale mutation
-      const scaleMatch = cmd.match(/scale\s+.*?([0-9]*\.?[0-9]+)/);
-      if (scaleMatch) {
-        const s = parseFloat(scaleMatch[1]);
-        targetNode.scale.set(s, s, s);
-        payload.scale = s;
-        appendMessage(`Scaled ${targetKey}`, 'sys', payload);
-        return;
-      }
-
-      // Color mutation
-      for (const [name, hex] of Object.entries(colorMap)) {
-        if (cmd.includes(name)) {
-          applyColorToNode(targetNode, hex);
-          payload.color = name;
-          appendMessage(`Recolored ${targetKey}`, 'sys', payload);
-          return;
-        }
-      }
-
-      appendMessage(`Matched <b>${targetKey}</b>, but didn't recognize the action. Try a color, "scale 1.5", "hide", or "show".`, 'sys');
-    }
-
-    sendBtn.addEventListener('click', () => {
-      processCommand(chatInput.value);
-      chatInput.value = '';
-    });
-    chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        processCommand(chatInput.value);
-        chatInput.value = '';
-      }
-    });
-
-    // 6. Binary .GLB Export
     document.getElementById('export-glb').addEventListener('click', () => {
       const exporter = new GLTFExporter();
-      exporter.parse(
-        assetRoot,
-        (gltf) => {
-          const blob = new Blob([gltf], { type: 'application/octet-stream' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = 'modular_asset.glb';
-          link.click();
-          URL.revokeObjectURL(url);
-          appendMessage('Exported <b>modular_asset.glb</b>', 'sys');
-        },
-        (err) => {
-          console.error(err);
-          appendMessage('Export failed. Check console.', 'sys');
-        },
-        { binary: true }
-      );
+      exporter.parse(assetRoot, (gltf) => {
+        const blob = new Blob([gltf], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'synthesized_asset.glb';
+        link.click();
+        URL.revokeObjectURL(url);
+      }, { binary: true });
     });
 
-    // 7. Resize & Animation Loop
+    buildDefaultAsset();
+
     window.addEventListener('resize', () => {
       camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
